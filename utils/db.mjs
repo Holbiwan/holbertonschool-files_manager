@@ -5,38 +5,51 @@ const DB_PORT = process.env.DB_PORT || 27017;
 const DB_DATABASE = process.env.DB_DATABASE || 'files_manager';
 const url = `mongodb://${DB_HOST}:${DB_PORT}`;
 
+/**
+ * Class for performing operations with Mongo service
+ */
 class DBClient {
   constructor() {
-    this.client = new MongoClient(url, { useUnifiedTopology: true });
-    this.client.connect()
-      .then((client) => {
+    MongoClient.connect(url, { useUnifiedTopology: true }, (err, client) => {
+      if (!err) {
+        // console.log('Connected successfully to server');
         this.db = client.db(DB_DATABASE);
-        console.log('MongoDB client connected to the server');
-      })
-      .catch((err) => {
-        console.error(`MongoDB client not connected to the server: ${err.message}`);
-        this.db = null;
-      });
+        this.usersCollection = this.db.collection('users');
+        this.filesCollection = this.db.collection('files');
+      } else {
+        console.log(err.message);
+        this.db = false;
+      }
+    });
   }
 
+  /**
+   * Checks if connection to Redis is Alive
+   * @return {boolean} true if connection alive or false if not
+   */
   isAlive() {
     return !!this.db;
   }
 
+  /**
+   * Returns the number of documents in the collection users
+   * @return {number} amount of users
+   */
   async nbUsers() {
-    if (!this.isAlive()) {
-      throw new Error('MongoDB client is not connected');
-    }
-    return this.db.collection('users').countDocuments();
+    const numberOfUsers = this.usersCollection.countDocuments();
+    return numberOfUsers;
   }
 
+  /**
+   * Returns the number of documents in the collection files
+   * @return {number} amount of files
+   */
   async nbFiles() {
-    if (!this.isAlive()) {
-      throw new Error('MongoDB client is not connected');
-    }
-    return this.db.collection('files').countDocuments();
+    const numberOfFiles = this.filesCollection.countDocuments();
+    return numberOfFiles;
   }
 }
 
 const dbClient = new DBClient();
+
 export default dbClient;
