@@ -1,63 +1,82 @@
-/* eslint-disable */
-import sha1 from 'sha1';
 import { ObjectId } from 'mongodb';
-import Bull from 'bull';
-import DBClient from '../utils/db';
-import RedisClient from '../utils/redis';
+import sha1 from 'sha1';
+import Queue from 'bull';
+import dbClient from '../utils/db';
+import userUtils from '../utils/user';
+
+const userQueue = new Queue('userQueue');
 
 class UsersController {
+  /**
+   * Creates a user using email and password
+   * To create a user, you must specify an email and a password.
+   * @param {Object} request - The request object
+   * @param {Object} response - The response object
+   * @returns {Object} - Returns the newly created user with status code 201
+   */
   static async postNew(request, response) {
-    const userQueue = new Bull('userQueue');
+    try {
+      const { email, password } = request.body;
 
-    const userEmail = request.body.email;
-    if (!userEmail) {
-      return response.status(400).send({ error: 'Missing email' });
+      if (!email) {
+        return response.status(400).json({ error: 'Missing email' });
+      }
+
+      if (!password) {
+        return response.status(400).json({ error: 'Missing password' });
+      }
+
+      const emailExists = await dbClient.usersCollection.findOne({ email });
+
+      if (emailExists) {
+        return response.status(400).json({ error: 'Already exist' });
+      }
+
+      const sha1Password = sha1(password);
+
+      const result = await dbClient.usersCollection.insertOne({
+        email,
+        password: sha1Password,
+      });
+
+      const user = {
+        id: result.insertedId,
+        email,
+      };
+
+      await userQueue.add({
+        userId: result.insertedId.toString(),
+      });
+
+      return response.status(201).json(user);
+    } catch (err) {
+      console.error('Error creating user:', err);
+      return response.status(500).json({ error: 'Error creating user' });
     }
-
-    const userPassword = request.body.password;
-    if (!userPassword) {
-      return response.status(400).send({ error: 'Missing password' });
-    }
-
-    const oldUserEmail = await DBClient.db
-      .collection('users')
-      .findOne({ email: userEmail });
-    if (oldUserEmail) {
-      return response.status(400).send({ error: 'Already exist' });
-    }
-
-    const shaUserPassword = sha1(userPassword);
-    const result = await DBClient.db
-      .collection('users')
-      .insertOne({ email: userEmail, password: shaUserPassword });
-
-    userQueue.add({
-      userId: result.insertedId,
-    });
-
-    return response.status(201).send({ id: result.insertedId, email: userEmail });
   }
 
+  /**
+   * Retrieves the authenticated user based on the token
+   * @param {Object} request - The request object
+   * @param {Object} response - The response object
+   * @returns {Object} - Returns the user object (email and id only) with status code 200
+   */
   static async getMe(request, response) {
-    const token = request.header('X-Token') || null;
-    if (!token) {
-      return response.status(401).send({ error: 'Unauthorized' });
+    try {
+      const { userId } = await userUtils.getUserIdAndKey(request);
+
+      const user = await userUtils.getUser({ _id: ObjectId(userId) });
+
+      if (!user) {
+        return response.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const processedUser = { id: user._id, email: user.email };
+      return response.status(200).json(processedUser);
+    } catch (err) {
+      console.error('Error retrieving user:', err);
+      return response.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const redisToken = await RedisClient.get(`auth_${token}`);
-    if (!redisToken) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
-
-    const user = await DBClient.db
-      .collection('users')
-      .findOne({ _id: ObjectId(redisToken) });
-
-    if (!user) {
-      return response.status(401).send({ error: 'Unauthorized' });
-    }
-
-    return response.status(200).send({ id: user._id, email: user.email });
   }
 }
 

@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient } from 'mongodb';
 
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = process.env.DB_PORT || 27017;
@@ -11,13 +11,11 @@ class DBClient {
     this.client.connect()
       .then((client) => {
         this.db = client.db(DB_DATABASE);
-        this.usersCollection = this.db.collection('users');
-        this.filesCollection = this.db.collection('files');
         console.log('MongoDB client connected to the server');
       })
       .catch((err) => {
-        console.log(`MongoDB client not connected to the server: ${err.message}`);
-        this.db = false;
+        console.error(`MongoDB client not connected to the server: ${err.message}`);
+        this.db = null;
       });
   }
 
@@ -29,17 +27,16 @@ class DBClient {
     if (!this.isAlive()) {
       throw new Error('MongoDB client is not connected');
     }
-    return this.usersCollection.countDocuments();
+    return this.db.collection('users').countDocuments();
   }
 
   async nbFiles() {
     if (!this.isAlive()) {
       throw new Error('MongoDB client is not connected');
     }
-    return this.filesCollection.countDocuments();
+    return this.db.collection('files').countDocuments();
   }
 }
 
 const dbClient = new DBClient();
-
 export default dbClient;
