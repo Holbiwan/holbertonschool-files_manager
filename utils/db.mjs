@@ -8,20 +8,17 @@ const url = `mongodb://${DB_HOST}:${DB_PORT}`;
 class DBClient {
   constructor() {
     this.client = new MongoClient(url, { useUnifiedTopology: true });
-    this.connect();
-  }
-
-  async connect() {
-    try {
-      await this.client.connect();
-      this.db = this.client.db(DB_DATABASE);
-      this.usersCollection = this.db.collection('users');
-      this.filesCollection = this.db.collection('files');
-      console.log('MongoDB client connected to the server');
-    } catch (err) {
-      console.log(`MongoDB client not connected to the server: ${err.message}`);
-      this.db = false;
-    }
+    this.client.connect()
+      .then((client) => {
+        this.db = client.db(DB_DATABASE);
+        this.usersCollection = this.db.collection('users');
+        this.filesCollection = this.db.collection('files');
+        console.log('MongoDB client connected to the server');
+      })
+      .catch((err) => {
+        console.log(`MongoDB client not connected to the server: ${err.message}`);
+        this.db = false;
+      });
   }
 
   isAlive() {
