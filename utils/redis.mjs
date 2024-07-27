@@ -11,29 +11,33 @@ class RedisClient {
   }
 
   async get(key) {
-    return this.handleRedisOperation('get', key);
+    return new Promise((resolve, reject) => {
+      this.client.get(key, (err, reply) => {
+        if (err) reject(err);
+        else resolve(reply);
+      });
+    });
   }
 
   async set(key, value, duration) {
-    return this.handleRedisOperation('setex', key, duration, value);
+    return new Promise((resolve, reject) => {
+      this.client.setex(key, duration, value, (err, reply) => {
+        if (err) reject(err);
+        else resolve(reply);
+      });
+    });
   }
 
   async del(key) {
-    return this.handleRedisOperation('del', key);
-  }
-
-  handleRedisOperation(method, ...args) {
     return new Promise((resolve, reject) => {
-      this.client[method](...args, (err, reply) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(reply);
-        }
+      this.client.del(key, (err, reply) => {
+        if (err) reject(err);
+        else resolve(reply);
       });
     });
   }
 }
 
 const redisClient = new RedisClient();
+
 module.exports = redisClient;
