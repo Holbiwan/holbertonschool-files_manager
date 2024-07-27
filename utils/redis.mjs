@@ -4,7 +4,7 @@ import { promisify } from 'util';
 class RedisClient {
   constructor() {
     this.client = createClient({
-      url: 'redis://localhost:6379'
+      url: 'redis://localhost:6379',
     });
 
     this.client.on('error', (err) => console.error('Redis Client Error', err));
@@ -16,7 +16,7 @@ class RedisClient {
   }
 
   isAlive() {
-    return this.client.isOpen();
+    return this.client.isOpen;
   }
 
   async get(key) {
