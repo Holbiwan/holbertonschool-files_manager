@@ -1,4 +1,5 @@
 import mongodb from 'mongodb';
+
 const { MongoClient } = mongodb;
 
 class DBClient {
@@ -10,7 +11,7 @@ class DBClient {
     const uri = `mongodb://${host}:${port}/`;
     this.client = new MongoClient(uri, { useUnifiedTopology: true });
 
-    this.client.connect(err => {
+    this.client.connect((err) => {
       if (err) {
         console.error('Failed to connect to MongoDB', err);
         this.db = null;
