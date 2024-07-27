@@ -68,5 +68,5 @@ class DBClient {
   }
 }
 
-// Export a singleton instance of DBClient, ensuring only one instance
-module.exports = new DBClient();
+// Export a singleton instance of DBClient, ensuring only one instance is used
+export default new DBClient();
