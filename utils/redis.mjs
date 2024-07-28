@@ -1,10 +1,15 @@
-// Import the Redis module using ES module syntax
-import redis from 'redis';
+// Import the Redis library using ES module syntax
+import redis from 'redis'; // Ensure that 'redis' is correctly imported
 
 class RedisClient {
   constructor() {
     // Create a new Redis client
-    this.client = redis.createClient();
+    this.client = redis.createClient({
+      // Optionally you can specify additional connection settings
+      // host: 'localhost',
+      // port: 6379
+    });
+
     this.client.on('error', (error) => console.error(`Redis client error: ${error}`));
   }
 
@@ -26,7 +31,7 @@ class RedisClient {
   // Set a value in Redis with an expiration
   async set(key, value, duration) {
     return new Promise((resolve, reject) => {
-      this.client.setex(key, duration, value, (err, reply) => {
+      this.client.setex(key, parseInt(duration, 10), value, (err, reply) => {
         if (err) reject(err);
         else resolve(reply);
       });
