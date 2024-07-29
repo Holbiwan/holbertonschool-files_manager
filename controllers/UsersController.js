@@ -16,7 +16,7 @@ class UsersController {
   static async postNew(request, response) {
     try {
       const { email, password } = request.body;
-
+      console.log(email);
       if (!email) {
         return response.status(400).json({ error: 'Missing email' });
       }
@@ -33,7 +33,7 @@ class UsersController {
 
       const sha1Password = sha1(password);
 
-      const result = await dbClient.db.Collection.insertOne({
+      const result = await dbClient.db.collection("user").insertOne({
         email,
         password: sha1Password,
       });

@@ -32,6 +32,13 @@ class DBClient {
     }
     return this.db.collection('users').countDocuments();
   }
+  async getUser(query) {
+    // Search for the user in the collection
+    console.log('QUERY IN DB.JS', query);
+    const user = await this.db.collection('users').findOne(query);
+    console.log('GET USER IN DB.JS', user);
+    return user;
+  }
 
   async nbFiles() {
     if (!this.db) {
