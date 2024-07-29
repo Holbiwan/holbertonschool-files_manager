@@ -27,7 +27,7 @@ class UsersController {
 
       const emailExists = await dbClient.getUser({email})
 
-      if (emailExists) {
+      if (!emailExists) {
         return response.status(400).json({ error: 'Already exist' });
       }
 
