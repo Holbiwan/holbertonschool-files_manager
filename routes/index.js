@@ -10,6 +10,5 @@ const router = express.Router();
 router.get('/status', AppController.getStatus);
 router.get('/stats', AppController.getStats);
 router.post('/users', UsersController.postNew);
-router.get('/connect', AuthController.getConnect);
 
 export default router;
