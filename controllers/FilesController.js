@@ -111,7 +111,7 @@ class FilesController {
         return response.status(401).json({ error: 'Unauthorized' });
       }
 
-      let parentId = request.query.parentId || '0';
+      const parentId = request.query.parentId || '0';
       if (parentId !== '0' && !basicUtils.isValidId(parentId)) {
         return response.status(400).json({ error: 'Invalid parentId' });
       }

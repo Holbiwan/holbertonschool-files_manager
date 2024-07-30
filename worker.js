@@ -23,8 +23,7 @@ fileQueue.process(async (job) => {
     throw new Error('Missing fileId');
   }
 
-  if (!basicUtils.isValidId(fileId) || !basicUtils.isValidId(userId))
-    throw new Error('File not found');
+  if (!basicUtils.isValidId(fileId) || !basicUtils.isValidId(userId)) throw new Error('File not found');
 
   const file = await fileUtils.getFile({
     _id: ObjectId(fileId),
