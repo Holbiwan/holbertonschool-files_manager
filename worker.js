@@ -1,67 +1,40 @@
-import Queue from 'bull';
-import { ObjectId } from 'mongodb';
-import { promises as fsPromises } from 'fs';
-import fileUtils from './utils/file';
-import userUtils from './utils/user';
-import basicUtils from './utils/basic';
-
+const Bull = require('bull');
 const imageThumbnail = require('image-thumbnail');
+const path = require('path');
 
-const fileQueue = new Queue('fileQueue');
-const userQueue = new Queue('userQueue');
+// Create a Bull queue
+const fileQueue = new Bull('fileQueue');
 
+// Queue processing
 fileQueue.process(async (job) => {
-  const { fileId, userId } = job.data;
+    const { userId, fileId } = job.data;
 
-  if (!userId) {
-    console.log('Missing userId');
-    throw new Error('Missing userId');
-  }
-
-  if (!fileId) {
-    console.log('Missing fileId');
-    throw new Error('Missing fileId');
-  }
-
-  if (!basicUtils.isValidId(fileId) || !basicUtils.isValidId(userId)) throw new Error('File not found');
-
-  const file = await fileUtils.getFile({
-    _id: ObjectId(fileId),
-    userId: ObjectId(userId),
-  });
-
-  if (!file) throw new Error('File not found');
-
-  const { localPath } = file;
-  const options = {};
-  const widths = [500, 250, 100];
-
-  widths.forEach(async (width) => {
-    options.width = width;
-    try {
-      const thumbnail = await imageThumbnail(localPath, options);
-      await fsPromises.writeFile(`${localPath}_${width}`, thumbnail);
-    } catch (err) {
-      console.error(err.message);
+    // Check if userId and fileId are present in the job
+    if (!userId) {
+        throw new Error('Missing userId');
     }
-  });
-});
+    if (!fileId) {
+        throw new Error('Missing fileId');
+    }
 
-userQueue.process(async (job) => {
-  const { userId } = job.data;
+    // Find the document in the database
+    const fileDocument = await DBClient.db.collection('files').findOne({ _id: ObjectId(fileId), userId });
 
-  if (!userId) {
-    console.log('Missing userId');
-    throw new Error('Missing userId');
-  }
+    if (!fileDocument) {
+        throw new Error('File not found');
+    }
 
-  if (!basicUtils.isValidId(userId)) throw new Error('User not found');
+    // Generate thumbnails
+    const sizes = [500, 250, 100];
+    const originalFilePath = path.join(process.env.FOLDER_PATH || '/tmp/files_manager', `${fileId}`);
 
-  const user = await userUtils.getUser({
-    _id: ObjectId(userId),
-  });
-
-  if (!user) throw new Error('User not found');
-
-  console.log(`Welcome ${user.email}!`);
+    await Promise.all(sizes.map(async (size) => {
+        try {
+            const thumbnail = await imageThumbnail(originalFilePath, { width: size });
+            const thumbnailFilePath = path.join(process.env.FOLDER_PATH || '/tmp/files_manager', `${fileId}_${size}`);
+            await fs.writeFile(thumbnailFilePath, thumbnail);
+        } catch (error) {
+            console.error(`Error generating thumbnail for size ${size}: ${error.message}`);
+        }
+    }));
 });
