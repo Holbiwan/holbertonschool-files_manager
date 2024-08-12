@@ -1,15 +1,16 @@
+/* eslint-disable */
 import { v4 as uuid4 } from 'uuid';
 import RedisClient from '../utils/redis';
 import DBClient from '../utils/db';
 
 const { ObjectId } = require('mongodb');
 const fs = require('fs');
-const Bull = require('bull');
 const mime = require('mime-types');
-const path = require('path');
-
+const Bull = require('bull');
 
 class FilesController {
+  constructor() {}
+
   static async postUpload(req, res) {
     const fileQueue = new Bull('fileQueue');
 
@@ -28,10 +29,12 @@ class FilesController {
     if (!fileName) return res.status(400).send({ error: 'Missing name' });
 
     const fileType = req.body.type;
-    if (!fileType || !['folder', 'file', 'image'].includes(fileType)) return res.status(400).send({ error: 'Missing type' });
+    if (!fileType || !['folder', 'file', 'image'].includes(fileType))
+      return res.status(400).send({ error: 'Missing type' });
 
     const fileData = req.body.data;
-    if (!fileData && ['file', 'image'].includes(fileType)) return res.status(400).send({ error: 'Missing data' });
+    if (!fileData && ['file', 'image'].includes(fileType))
+      return res.status(400).send({ error: 'Missing data' });
 
     const fileIsPublic = req.body.isPublic || false;
 
@@ -42,8 +45,10 @@ class FilesController {
       const parentFile = await DBClient.db
         .collection('files')
         .findOne({ _id: ObjectId(fileParentId) });
-      if (!parentFile) return res.status(400).send({ error: 'Parent not found' });
-      if (parentFile.type !== 'folder') return res.status(400).send({ error: 'Parent is not a folder' });
+      if (!parentFile)
+        return res.status(400).send({ error: 'Parent not found' });
+      if (parentFile.type !== 'folder')
+        return res.status(400).send({ error: 'Parent is not a folder' });
     }
 
     const fileDataDb = {
@@ -72,13 +77,14 @@ class FilesController {
     const buff = Buffer.from(fileData, 'base64');
     const pathFile = `${pathDir}/${fileUuid}`;
 
-    // eslint-disable-next-line consistent-return
     fs.mkdir(pathDir, { recursive: true }, (error) => {
       if (error) return res.status(400).send({ error: error.message });
-      // eslint-disable-next-line consistent-return
-      fs.writeFile(pathFile, buff, (error) => {
-        if (error) return res.status(400).send({ error: error.message });
-      });
+      return true;
+    });
+
+    fs.writeFile(pathFile, buff, (error) => {
+      if (error) return res.status(400).send({ error: error.message });
+      return true;
     });
 
     fileDataDb.localPath = pathFile;
@@ -88,10 +94,6 @@ class FilesController {
       userId: fileDataDb.userId,
       fileId: fileDataDb._id,
     });
-
-    if (fileType === 'image') {
-      fileQueue.add({ userId: user._id, fileId: fileDataDb._id });
-    }
 
     return res.status(201).send({
       id: fileDataDb._id,
@@ -108,7 +110,8 @@ class FilesController {
     if (!token) return response.status(401).send({ error: 'Unauthorized' });
 
     const redisToken = await RedisClient.get(`auth_${token}`);
-    if (!redisToken) return response.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken)
+      return response.status(401).send({ error: 'Unauthorized' });
 
     const user = await DBClient.db
       .collection('users')
@@ -138,7 +141,8 @@ class FilesController {
     if (!token) return response.status(401).send({ error: 'Unauthorized' });
 
     const redisToken = await RedisClient.get(`auth_${token}`);
-    if (!redisToken) return response.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken)
+      return response.status(401).send({ error: 'Unauthorized' });
 
     const user = await DBClient.db
       .collection('users')
@@ -149,6 +153,8 @@ class FilesController {
     parentId = parentId === '0' ? 0 : parentId;
 
     const pagination = request.query.page || 0;
+    // pagination = Number.isNaN(pagination) ? 0 : pagination;
+    // pagination = pagination < 0 ? 0 : pagination;
 
     const aggregationMatch = {
       $and: [{ parentId: parentId === 0 ? 0 : ObjectId(parentId) }],
@@ -158,7 +164,8 @@ class FilesController {
       { $skip: pagination * 20 },
       { $limit: 20 },
     ];
-    if (parentId === 0) aggregateData = [{ $skip: pagination * 20 }, { $limit: 20 }];
+    if (parentId === 0)
+      aggregateData = [{ $skip: pagination * 20 }, { $limit: 20 }];
 
     const files = await DBClient.db
       .collection('files')
@@ -184,7 +191,8 @@ class FilesController {
     if (!token) return response.status(401).send({ error: 'Unauthorized' });
 
     const redisToken = await RedisClient.get(`auth_${token}`);
-    if (!redisToken) return response.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken)
+      return response.status(401).send({ error: 'Unauthorized' });
 
     const user = await DBClient.db
       .collection('users')
@@ -220,7 +228,8 @@ class FilesController {
     if (!token) return response.status(401).send({ error: 'Unauthorized' });
 
     const redisToken = await RedisClient.get(`auth_${token}`);
-    if (!redisToken) return response.status(401).send({ error: 'Unauthorized' });
+    if (!redisToken)
+      return response.status(401).send({ error: 'Unauthorized' });
 
     const user = await DBClient.db
       .collection('users')
@@ -238,7 +247,7 @@ class FilesController {
       .collection('files')
       .update(
         { _id: ObjectId(idFile), userId: user._id },
-        { $set: { isPublic: false } },
+        { $set: { isPublic: false } }
       );
     fileDocument = await DBClient.db
       .collection('files')
@@ -281,29 +290,22 @@ class FilesController {
       }
     }
 
-    if (!isPublic && !owner) return response.status(404).send({ error: 'Not found' });
-    if (['folder'].includes(type)) {
+    if (!isPublic && !owner)
+      return response.status(404).send({ error: 'Not found' });
+    if (['folder'].includes(type))
       return response
         .status(400)
         .send({ error: "A folder doesn't have content" });
-    }
 
-    // If size is specified, append it to the filename
-    const fileName = size === 0 ? fileDocument.name : `${fileDocument.name}_${size}`;
-
-    const realPath = size === 0 ? fileDocument.localPath : `${fileDocument.localPath}_${size}`;
+    const realPath =
+      size === 0 ? fileDocument.localPath : `${fileDocument.localPath}_${size}`;
 
     try {
-      // Check if the file exists
-      await fs.access(realPath);
-
-      // If the file exists, send it
       const dataFile = fs.readFileSync(realPath);
       const mimeType = mime.contentType(fileDocument.name);
       response.setHeader('Content-Type', mimeType);
       return response.send(dataFile);
     } catch (error) {
-      // If the file doesn't exist, return a 404 error
       return response.status(404).send({ error: 'Not found' });
     }
   }
